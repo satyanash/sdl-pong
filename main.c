@@ -6,6 +6,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_ttf.h>
+#include <SDL2/SDL_mixer.h>
 
 #define SCREEN_WIDTH 1024
 #define SCREEN_HEIGHT 768
@@ -185,8 +186,17 @@ int main(const int argc, const char **argv)
 		return 1;
 	}
 
+	// Initialize the SDL sound system
+	if( Mix_OpenAudio( 22050, MIX_DEFAULT_FORMAT, 1, 4096 ) == -1 ) {
+		return 1;
+	}
+
 	SDL_Window *win = SDL_CreateWindow("Pong", 100, 100, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
 	SDL_Renderer *ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+
+	Mix_Chunk* dead = Mix_LoadWAV("./res/dead.wav");
+	Mix_Chunk* knock = Mix_LoadWAV("./res/knock.wav");
+	Mix_Chunk* bounce = Mix_LoadWAV("./res/bounce.wav");
 
 	struct GameState state = new_game_state();
 
@@ -246,19 +256,23 @@ int main(const int argc, const char **argv)
 			if( state.ball.position.x < 0 ){
 				printf("BALL IMPACT: %d %d\tVEL: %d %d\n", state.ball.position.x, state.ball.position.y, state.ball.velocity.x, state.ball.velocity.y);
 				state.ball.velocity.x = state.ball.velocityDelta;
+				Mix_PlayChannel(-1, bounce, 0);
 			}
 			if( state.ball.position.x + BALL_WIDTH > SCREEN_WIDTH ) {
 				printf("BALL IMPACT: %d %d\tVEL: %d %d\n", state.ball.position.x, state.ball.position.y, state.ball.velocity.x, state.ball.velocity.y);
 				state.ball.velocity.x = -state.ball.velocityDelta;
+				Mix_PlayChannel(-1, bounce, 0);
 			}
 			if( state.ball.position.y < 0 ){
 				printf("BALL IMPACT: %d %d\tVEL: %d %d\n", state.ball.position.x, state.ball.position.y, state.ball.velocity.x, state.ball.velocity.y);
 				state.ball.velocity.y = state.ball.velocityDelta;
+				Mix_PlayChannel(-1, bounce, 0);
 			}
 			if( state.ball.position.y + BALL_HEIGHT > SCREEN_HEIGHT ) {
 				//printf("BALL IMPACT: %d %d\tVEL: %d %d\n", state.ball.position.x, state.ball.position.y, state.ball.velocity.x, state.ball.velocity.y);
 				//state.ball.velocity.y = -state.ball.velocityDelta;
 				state.gameover = true;
+				Mix_PlayChannel(-1, dead, 0);
 			}
 
 			if(state.paddle.exists){
@@ -267,11 +281,12 @@ int main(const int argc, const char **argv)
 					if(state.ball.position.x + BALL_WIDTH >= state.paddle.position.x && state.ball.position.x + BALL_WIDTH <= state.paddle.position.x + PADDLE_WIDTH){
 						//increment ball and paddle velocity delta due to successful paddle hit
 						state.ball.velocityDelta += 1;
-						state.paddle.velocityDelta += 1;
+						state.paddle.velocityDelta += 2;
 
-						printf("BOUNCE : %d %d\n", state.ball.position.x, state.ball.position.y);
+						printf("BALL IMPACT: %d %d\tVEL: %d %d\n", state.ball.position.x, state.ball.position.y, state.ball.velocity.x, state.ball.velocity.y);
+						printf("PADDLE: %d %d\tVEL: %d %d\n", state.paddle.position.x, state.paddle.position.y, state.paddle.velocity.x, state.paddle.velocity.y);
 						state.ball.velocity.y = -state.ball.velocityDelta;
-
+						Mix_PlayChannel(-1, knock, 0);
 					}
 				}
 

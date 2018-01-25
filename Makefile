@@ -7,7 +7,7 @@ test:
 build:
 	make dirs
 	gcc -c main.c -o $(OUTPUT_DIR)/main.o;
-	gcc $(OUTPUT_DIR)/main.o -lSDL2 -lSDL2_ttf -lSDL2_image -o $(OUTPUT_DIR)/main;
+	gcc $(OUTPUT_DIR)/main.o -lSDL2 -lSDL2_ttf -lSDL2_image -lSDL2_mixer -o $(OUTPUT_DIR)/main;
 
 run:
 	$(OUTPUT_DIR)/main;
