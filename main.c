@@ -7,12 +7,14 @@
 // SDL includes
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
-#include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL_mixer.h>
 
 // custom includes
+#include "util.c"
 #include "sound.c"
 #include "music.c"
+#include "video.c"
+#include "font.c"
 
 #define SCREEN_WIDTH 1024
 #define SCREEN_HEIGHT 768
@@ -23,14 +25,6 @@
 #define PADDLE_WIDTH 200
 #define PADDLE_HEIGHT 30
 
-const char* res_open_sans_ttf = "./res/OpenSans-Regular.ttf";
-
-void log_SDLError(FILE* outputfile, char* message){
-	if(message != NULL){
-		fprintf(outputfile, "ERROR: %s: ", message);
-	}
-	fprintf(outputfile, "error: %s\n", SDL_GetError());
-}
 
 struct Vector {
 	int x;
@@ -78,33 +72,6 @@ void log_paddle_state(const struct Paddle* paddle){
 	printf("PADDLE IMPACT: %d %d\tVEL: %d %d\n", paddle->position.x, paddle->position.y, paddle->velocity.x, paddle->velocity.y);
 }
 
-SDL_Texture* renderText(const char* message, const char* fontFile, SDL_Color color, int fontSize, SDL_Renderer *renderer)
-{
-	//Open the font
-	TTF_Font *font = TTF_OpenFont(fontFile, fontSize);
-	if (font == NULL){
-		log_SDLError(stderr, "TTF_OpenFont");
-		return NULL;
-	}
-
-	//We need to first render to a surface as that's what TTF_RenderText
-	//returns, then load that surface into a texture
-	SDL_Surface *surf = TTF_RenderText_Blended(font, message, color);
-	if (surf == NULL){
-		TTF_CloseFont(font);
-		log_SDLError(stderr, "TTF_RenderText");
-		return NULL;
-	}
-	SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surf);
-	if (texture == NULL){
-		log_SDLError(stderr, "CreateTexture");
-	}
-	//Clean up the surface and font
-	SDL_FreeSurface(surf);
-	TTF_CloseFont(font);
-	return texture;
-}
-
 void reset_game_state(struct GameState* state){
 	//init the random number generator
 	srand((unsigned) time(NULL));
@@ -131,13 +98,13 @@ void reset_game_state(struct GameState* state){
 	state->ball.velocityDelta = 5;
 }
 
-void render_game( const struct GameState* state, SDL_Renderer* ren){
+void render_game( const struct GameState* state, struct VideoContext* video_ctx, struct FontContext* font_ctx){
 
 	//SDL_SetRenderDrawColor(ren, 97, 132, 247, SDL_ALPHA_OPAQUE);
-	SDL_SetRenderDrawColor(ren, 0, 0, 0, SDL_ALPHA_OPAQUE);
-	SDL_RenderFillRect(ren, &screen_rect);
+	SDL_SetRenderDrawColor(video_ctx->ren, 0, 0, 0, SDL_ALPHA_OPAQUE);
+	SDL_RenderFillRect(video_ctx->ren, &screen_rect);
 
-	SDL_SetRenderDrawColor(ren, 255, 255, 255, SDL_ALPHA_OPAQUE);
+	SDL_SetRenderDrawColor(video_ctx->ren, 255, 255, 255, SDL_ALPHA_OPAQUE);
 
 	if(state->paddle.exists){
 		// draw the paddle
@@ -147,7 +114,7 @@ void render_game( const struct GameState* state, SDL_Renderer* ren){
 		paddle.w = PADDLE_WIDTH;
 		paddle.h = PADDLE_HEIGHT;
 
-		SDL_RenderFillRect(ren, &paddle);
+		SDL_RenderFillRect(video_ctx->ren, &paddle);
 	}
 
 	// draw the ball
@@ -157,42 +124,42 @@ void render_game( const struct GameState* state, SDL_Renderer* ren){
 	ball.w = BALL_WIDTH;
 	ball.h = BALL_HEIGHT;
 
-	SDL_RenderFillRect(ren, &ball);
+	SDL_RenderFillRect(video_ctx->ren, &ball);
 	if(state->gameover){
 		SDL_Color color = { 255, 255, 255, 255 };
-		SDL_Texture* text = renderText("GAME OVER!", res_open_sans_ttf, color, 64, ren);
+		SDL_Texture* text = render_text(video_ctx, font_ctx, FONT_OPEN_SANS, 64, "GAME OVER!", color);
 
 		SDL_Rect dst;
 		SDL_QueryTexture(text, NULL, NULL, &dst.w, &dst.h); //Query the texture to get its width and height to use
 		dst.x = (SCREEN_WIDTH / 2) - dst.w / 2;
 		dst.y = (SCREEN_HEIGHT / 2) - dst.h / 2;
 
-		SDL_RenderCopy(ren, text, NULL, &dst);
+		SDL_RenderCopy(video_ctx->ren, text, NULL, &dst);
 
-		SDL_Texture* subtext = renderText("press ENTER to play again, Q to quit", res_open_sans_ttf, color, 16, ren);
+		SDL_Texture* subtext = render_text(video_ctx, font_ctx, FONT_OPEN_SANS, 16,"press ENTER to play again, Q to quit", color);
 		SDL_Rect subdst;
 		SDL_QueryTexture(subtext, NULL, NULL, &subdst.w, &subdst.h);
 		subdst.x = (SCREEN_WIDTH / 2) - subdst.w / 2;
 		subdst.y = (SCREEN_HEIGHT / 2) + dst.h / 2 + 20;
 
-		SDL_RenderCopy(ren, subtext, NULL, &subdst);
+		SDL_RenderCopy(video_ctx->ren, subtext, NULL, &subdst);
 	}
 
 	if(state->paused){
 		SDL_Color color = { 255, 255, 255, 255 };
-		SDL_Texture* text = renderText("PAUSED", res_open_sans_ttf, color, 64, ren);
+		SDL_Texture* text = render_text(video_ctx, font_ctx, FONT_OPEN_SANS, 64, "PAUSED", color);
 
 		SDL_Rect dst;
 		SDL_QueryTexture(text, NULL, NULL, &dst.w, &dst.h); //Query the texture to get its width and height to use
 		dst.x = (SCREEN_WIDTH / 2) - dst.w / 2;
 		dst.y = (SCREEN_HEIGHT / 2) - dst.h / 2;
 
-		SDL_RenderCopy(ren, text, NULL, &dst);
+		SDL_RenderCopy(video_ctx->ren, text, NULL, &dst);
 	}
 
 
 	// finally present the rendered stuff
-	SDL_RenderPresent(ren);
+	SDL_RenderPresent(video_ctx->ren);
 }
 
 void handle_event(const SDL_Event* e, struct GameState* state){
@@ -330,12 +297,18 @@ void perform_game_logic( struct GameState* state, struct SoundContext* sound_ctx
 
 int main(const int argc, const char **argv)
 {
+	// init video
+	init_video_system();
+	struct VideoContext* video_ctx = load_video("Breakout Pong", 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-	// Initialize SDL Video
-	if(SDL_Init(SDL_INIT_VIDEO) != 0){
-		log_SDLError(stderr, "SDL_Init");
-		return 1;
-	} 
+	// init fonts
+	init_font_system();
+	struct FontContext* font_ctx = load_fonts();
+
+	// init audio
+	init_audio_system();
+	struct SoundContext* sound_ctx = load_sounds();
+	struct MusicContext* music_ctx = load_musics();
 
 	// Initialize SDL Image
 	if ((IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG) != IMG_INIT_PNG){
@@ -344,20 +317,6 @@ int main(const int argc, const char **argv)
 		return 1;
 	}
 
-
-	// Initialize SDL TTF support
-	if (TTF_Init() != 0){
-		log_SDLError(stderr, "TTF_Init");
-		SDL_Quit();
-		return 1;
-	}
-
-	init_audio_system();
-	struct SoundContext* sound_ctx = load_sounds();
-	struct MusicContext* music_ctx = load_musics();
-
-	SDL_Window *win = SDL_CreateWindow("Breakout Pong", 100, 100, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
-	SDL_Renderer *ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
 	struct GameState state;
 	reset_game_state(&state);
@@ -380,15 +339,13 @@ int main(const int argc, const char **argv)
 		perform_game_logic(&state, sound_ctx, music_ctx);
 
 		// 3. Render the scene
-		render_game(&state, ren);
+		render_game(&state, video_ctx, font_ctx);
 	}
 
 	free_music_system(music_ctx);
 	free_sound_system(sound_ctx);
+	free_video_system(video_ctx);
 
-	SDL_DestroyRenderer(ren);
-	SDL_DestroyWindow(win);
-	SDL_Quit();
 	IMG_Quit();
 	return 0;
 }
