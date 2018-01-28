@@ -1,3 +1,6 @@
+#ifndef SOUND_C
+#define SOUND_C
+
 // SDL includes
 #include <SDL2/SDL_mixer.h>
 
@@ -61,3 +64,4 @@ void play_sound(const struct SoundContext* ctx, int code){
 	Mix_PlayChannel(-1, get_chunk(ctx, code), 0);
 }
 
+#endif /* SOUND_C */

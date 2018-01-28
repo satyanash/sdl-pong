@@ -1,3 +1,6 @@
+#ifndef MUSIC_C
+#define MUSIC_C
+
 // SDL includes
 #include <SDL2/SDL_mixer.h>
 
@@ -68,3 +71,5 @@ int toggle_music(const struct MusicContext* ctx, int code){
 		return Mix_HaltMusic();
 	}
 }
+
+#endif /* MUSIC_C */
