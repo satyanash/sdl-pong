@@ -49,7 +49,7 @@ int main(const int argc, const char **argv)
 
 
 	struct GameState state;
-	reset_game_state(&state);
+	reset_game_state(&state, 1);
 
 	SDL_Event e;
 	while (!state.quit){

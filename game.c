@@ -10,6 +10,8 @@
 
 #include "music.c"
 #include "sound.c"
+#include "levels.c"
+#include "util.c"
 
 void log_ball_state(const struct Ball* ball){
 	printf("BALL IMPACT: %d %d\tVEL: %d %d\n", ball->position.x, ball->position.y, ball->velocity.x, ball->velocity.y);
@@ -19,7 +21,7 @@ void log_paddle_state(const struct Paddle* paddle){
 	printf("PADDLE IMPACT: %d %d\tVEL: %d %d\n", paddle->position.x, paddle->position.y, paddle->velocity.x, paddle->velocity.y);
 }
 
-void reset_game_state(struct GameState* state){
+void reset_game_state(struct GameState* state, int level){
 	//init the random number generator
 	srand((unsigned) time(NULL));
 
@@ -47,6 +49,13 @@ void reset_game_state(struct GameState* state){
 	state->ball.velocity.x = 5 * (random_bool ? -1 : 1);
 	state->ball.velocity.y = -5;
 	state->ball.velocityDelta = 5;
+
+	//level
+	printf("MIN_TILE_WIDTH: %d\n", MIN_TILE_WIDTH);
+	printf("MIN_TILE_HEIGHT: %d\n", MIN_TILE_HEIGHT);
+	printf("MAX_TILE_ROWS: %d\n", MAX_TILE_ROWS);
+	printf("MAX_TILE_COLS: %d\n", MAX_TILE_COLS);
+	state->tile_map = get_level(level);
 }
 
 void perform_game_logic( struct GameState* state, struct SoundContext* sound_ctx, struct MusicContext* music_ctx){
@@ -78,6 +87,31 @@ void perform_game_logic( struct GameState* state, struct SoundContext* sound_ctx
 			state->gameover = true;
 			play_sound(sound_ctx, MIX_DEAD);
 			state->music = false;
+		}
+
+		SDL_Rect ball_rect;
+		ball_rect.x = ball->position.x;
+		ball_rect.y = ball->position.y;
+		ball_rect.w = ball->width;
+		ball_rect.h = ball->height;
+
+		SDL_Rect tile_rect;
+
+		//Paddle and Tile collision code
+		for(int i = 0; i < MAX_TILE_ROWS; i++){
+			for(int j = 0; j < MAX_TILE_COLS; j++){
+				if( ! state->tile_map->tiles[i][j]->broken){
+					tile_rect.x = j * MIN_TILE_WIDTH;
+					tile_rect.y = i * MIN_TILE_HEIGHT;
+					tile_rect.w = MIN_TILE_WIDTH;
+					tile_rect.h = MIN_TILE_HEIGHT;
+
+					if(intersects(&ball_rect, &tile_rect)){
+						state->tile_map->tiles[i][j]->broken = true;
+						ball->velocity.y = -ball->velocity.y;
+					}
+				}
+			}
 		}
 
 		//Paddle and Ball collision code
@@ -133,7 +167,7 @@ void handle_event(const SDL_Event* e, struct GameState* state){
 		state->quit = true;
 	}
 	if (e->key.keysym.sym == SDLK_RETURN && e->type == SDL_KEYUP){
-		reset_game_state(state);
+		reset_game_state(state, 1);
 	}
 	if (e->key.keysym.sym == SDLK_p && e->type == SDL_KEYUP && !state->gameover){
 		state->paused = !state->paused;

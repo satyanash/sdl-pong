@@ -4,6 +4,9 @@
 
 #include <stdbool.h>
 
+// SDL Includes
+#include <SDL2/SDL.h>
+
 #define SCREEN_WIDTH 1024
 #define SCREEN_HEIGHT 768
 
@@ -12,6 +15,12 @@
 
 #define PADDLE_WIDTH 200
 #define PADDLE_HEIGHT 30
+
+#define MAX_TILE_ROWS 10
+#define MAX_TILE_COLS 8
+
+#define MIN_TILE_HEIGHT 20
+#define MIN_TILE_WIDTH (SCREEN_WIDTH / MAX_TILE_COLS)
 
 struct Vector {
 	int x;
@@ -38,6 +47,19 @@ struct Paddle {
 	int velocityDelta;
 };
 
+struct Tile {
+	//Point position;
+	//int width;
+	//int height;
+	//SDL_Color color;
+	bool broken;
+};
+
+struct TileMap {
+	//int tile_count;
+	struct Tile* tiles[MAX_TILE_ROWS][MAX_TILE_COLS];
+};
+
 struct GameState {
 	struct Paddle paddle;
 	struct Ball ball;
@@ -45,6 +67,7 @@ struct GameState {
 	bool gameover;
 	bool paused;
 	bool music;
+	struct TileMap* tile_map;
 };
 
 #endif /* GAME_H */

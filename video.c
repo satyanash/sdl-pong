@@ -52,6 +52,22 @@ void render_game( const struct GameState* state, struct VideoContext* video_ctx,
 	ball.w = state->ball.width;
 	ball.h = state->ball.height;
 
+	//draw the tiles
+	for(int i = 0; i < MAX_TILE_ROWS; i++){
+		for(int j = 0; j < MAX_TILE_COLS; j++){
+			struct Tile* tile = state->tile_map->tiles[i][j];
+			if( ! tile->broken){
+				SDL_Rect tile_rect;
+				tile_rect.x = j * MIN_TILE_WIDTH;
+				tile_rect.y = i * MIN_TILE_HEIGHT;
+				tile_rect.w = MIN_TILE_WIDTH;
+				tile_rect.h = MIN_TILE_HEIGHT;
+
+				SDL_RenderFillRect(video_ctx->ren, &tile_rect);
+			}
+		}
+	}
+
 	SDL_RenderFillRect(video_ctx->ren, &ball);
 	if(state->gameover){
 		SDL_Color color = { 255, 255, 255, 255 };
